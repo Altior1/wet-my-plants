@@ -16,20 +16,25 @@ export default function TabLayout() {
         headerShown: false,
         tabBarButton: HapticTab,
       }}>
+        
       <Tabs.Screen
-        name="index"
+        name="add_plants"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Add Plants',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol name="leaf" size={24} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="list_plantsPage"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'My Plants',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol name="leaf" size={24} color={color} />
+          ),
         }}
       />
-    </Tabs>
+    </Tabs>  
   );
 }
