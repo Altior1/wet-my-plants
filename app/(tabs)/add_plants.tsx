@@ -34,7 +34,7 @@ export default function AddPlantsPage() {
     const newPlant = {
       id: Crypto.randomUUID(),
       name: name.trim(),
-      lastWateredDate: new Date(),
+      lastWateredDate: null,
       imageUrl: imageUrl.trim() || undefined,
       frequency: Number(frequency),
     };

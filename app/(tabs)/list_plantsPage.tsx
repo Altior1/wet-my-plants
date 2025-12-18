@@ -1,80 +1,31 @@
-import {
-  Alert,
-  FlatList,
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { SectionList, StyleSheet, Text, View } from "react-native";
 import { useShallow } from "zustand/react/shallow";
 import { useListPlantsStore } from "../../store/list_plants_store";
 import { Plant } from "../../interface/plants";
+import PlantCard from "../../components/plant-card";
+
+type PlantStatus = "late" | "soon" | "ok";
+
+const getPlantStatus = (plant: Plant): PlantStatus => {
+  if (!plant.lastWateredDate) {
+    return "late"; // Jamais arrosée = en retard
+  }
+
+  const lastWatered = new Date(plant.lastWateredDate);
+  const now = new Date();
+  const diffTime = now.getTime() - lastWatered.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays >= plant.frequency) {
+    return "late"; // En retard
+  } else if (diffDays >= plant.frequency - 2) {
+    return "soon"; // À arroser bientôt (dans les 2 prochains jours)
+  }
+  return "ok"; // Arrosée récemment
+};
 
 export default function ListPlantsPage() {
   const plants = useListPlantsStore(useShallow((state) => state.plants));
-  const removePlant = useListPlantsStore((state) => state.removePlant);
-  const waterPlant = useListPlantsStore((state) => state.waterPlant);
-
-  const formatDate = (date: Date) => {
-    const d = new Date(date);
-    return d.toLocaleDateString("fr-FR", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-  };
-
-  const renderPlant = ({ item }: { item: Plant }) => {
-    return (
-      <View style={styles.plantCard}>
-        {item.imageUrl ? (
-          <Image source={{ uri: item.imageUrl }} style={styles.plantImage} />
-        ) : (
-          <View style={styles.plantImagePlaceholder}>
-            <Text style={styles.plantImagePlaceholderText}>🌱</Text>
-          </View>
-        )}
-
-        <View style={styles.plantInfo}>
-          <Text style={styles.plantName}>{item.name}</Text>
-          <Text style={styles.frequencyText}>
-            Arrosage tous les {item.frequency} jours
-          </Text>
-          <Text style={styles.statusText}>
-            Dernier arrosage : {formatDate(item.lastWateredDate)}
-          </Text>
-        </View>
-
-        <TouchableOpacity
-          style={styles.waterButton}
-          onPress={() => waterPlant(item.id)}
-        >
-          <Text style={styles.waterButtonText}>💧</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={() => {
-            Alert.alert(
-              "Supprimer la plante",
-              `Êtes-vous sûr de vouloir supprimer ${item.name} ?`,
-              [
-                { text: "Annuler", style: "cancel" },
-                {
-                  text: "Supprimer",
-                  style: "destructive",
-                  onPress: () => removePlant(item.id),
-                },
-              ]
-            );
-          }}
-        >
-          <Text style={styles.deleteButtonText}>✕</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  };
 
   if (plants.length === 0) {
     return (
@@ -88,13 +39,26 @@ export default function ListPlantsPage() {
     );
   }
 
+  const latePlants = plants.filter((p) => getPlantStatus(p) === "late");
+  const soonPlants = plants.filter((p) => getPlantStatus(p) === "soon");
+  const okPlants = plants.filter((p) => getPlantStatus(p) === "ok");
+
+  const sections = [
+    { title: "🚨 En retard", data: latePlants },
+    { title: "⏰ À arroser bientôt", data: soonPlants },
+    { title: "✅ Arrosées", data: okPlants },
+  ].filter((section) => section.data.length > 0);
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Mes Plantes</Text>
       <Text style={styles.subtitle}>{plants.length} plante(s)</Text>
-      <FlatList
-        data={plants}
-        renderItem={renderPlant}
+      <SectionList
+        sections={sections}
+        renderItem={({ item }) => <PlantCard plant={item} />}
+        renderSectionHeader={({ section: { title } }) => (
+          <Text style={styles.sectionHeader}>{title}</Text>
+        )}
         keyExtractor={(item) => item.id}
         extraData={plants}
         contentContainerStyle={styles.listContent}
@@ -125,78 +89,13 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 16,
   },
-  plantCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  plantImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-  },
-  plantImagePlaceholder: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#e8f5e9",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  plantImagePlaceholderText: {
-    fontSize: 28,
-  },
-  plantInfo: {
-    flex: 1,
-    marginLeft: 16,
-  },
-  plantName: {
+  sectionHeader: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#333",
-  },
-  frequencyText: {
-    fontSize: 13,
-    color: "#666",
-    marginTop: 2,
-  },
-  statusText: {
-    fontSize: 13,
-    color: "#666",
-    marginTop: 4,
-  },
-  waterButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#e3f2fd",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 8,
-  },
-  waterButtonText: {
-    fontSize: 16,
-  },
-  deleteButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#ffebee",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  deleteButtonText: {
-    color: "#f44336",
-    fontSize: 16,
-    fontWeight: "bold",
+    backgroundColor: "#f5f5f5",
+    paddingVertical: 8,
+    marginTop: 8,
   },
   emptyContainer: {
     flex: 1,

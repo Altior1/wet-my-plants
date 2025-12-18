@@ -1,7 +1,7 @@
 export interface Plant {
     id: string;
     name: string;
-    lastWateredDate: Date;
+    lastWateredDate: Date | null;
     imageUrl?: string;
     frequency: number; // in days
 }
