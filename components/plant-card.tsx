@@ -70,8 +70,8 @@ export default function PlantCard({ plant }: PlantCardProps) {
 
   return (
     <View style={styles.plantCard}>
-      {plant.imageUrl ? (
-        <Image source={{ uri: plant.imageUrl }} style={styles.plantImage} />
+      {plant.imageUri ? (
+        <Image source={{ uri: plant.imageUri }} style={styles.plantImage} />
       ) : (
         <View style={styles.plantImagePlaceholder}>
           <Text style={styles.plantImagePlaceholderText}>🌱</Text>

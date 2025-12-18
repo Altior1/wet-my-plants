@@ -9,16 +9,69 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Image,
 } from "react-native";
 import * as Crypto from "expo-crypto";
+import * as ImagePicker from "expo-image-picker";
 import { useListPlantsStore } from "../../store/list_plants_store";
 
 export default function AddPlantsPage() {
   const [name, setName] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
+  const [imageUri, setImageUri] = useState<string | null>(null);
   const [frequency, setFrequency] = useState("");
 
   const addPlant = useListPlantsStore((state) => state.addPlant);
+
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission refusée",
+        "Nous avons besoin de votre permission pour accéder à la galerie."
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
+
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission refusée",
+        "Nous avons besoin de votre permission pour accéder à la caméra."
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
+
+  const showImageOptions = () => {
+    Alert.alert("Ajouter une photo", "Choisissez une option", [
+      { text: "Prendre une photo", onPress: takePhoto },
+      { text: "Choisir depuis la galerie", onPress: pickImage },
+      { text: "Annuler", style: "cancel" },
+    ]);
+  };
 
   const handleSubmit = () => {
     if (!name.trim()) {
@@ -35,7 +88,7 @@ export default function AddPlantsPage() {
       id: Crypto.randomUUID(),
       name: name.trim(),
       lastWateredDate: null,
-      imageUrl: imageUrl.trim() || undefined,
+      imageUri: imageUri || undefined,
       frequency: Number(frequency),
     };
 
@@ -43,7 +96,7 @@ export default function AddPlantsPage() {
 
     // Reset form
     setName("");
-    setImageUrl("");
+    setImageUri(null);
     setFrequency("");
 
     Alert.alert("Succès", `${newPlant.name} a été ajoutée à votre liste !`);
@@ -69,16 +122,27 @@ export default function AddPlantsPage() {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>URL de l'image (optionnel)</Text>
-          <TextInput
-            style={styles.input}
-            value={imageUrl}
-            onChangeText={setImageUrl}
-            placeholder="https://exemple.com/image.jpg"
-            placeholderTextColor="#999"
-            keyboardType="url"
-            autoCapitalize="none"
-          />
+          <Text style={styles.label}>Photo (optionnel)</Text>
+          <TouchableOpacity
+            style={styles.imagePickerButton}
+            onPress={showImageOptions}
+          >
+            {imageUri ? (
+              <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <Text style={styles.imagePlaceholderText}>+ Ajouter une photo</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          {imageUri && (
+            <TouchableOpacity
+              style={styles.removeImageButton}
+              onPress={() => setImageUri(null)}
+            >
+              <Text style={styles.removeImageText}>Supprimer la photo</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.formGroup}>
@@ -146,5 +210,37 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
+  },
+  imagePickerButton: {
+    borderRadius: 10,
+    overflow: "hidden",
+  },
+  imagePreview: {
+    width: "100%",
+    height: 200,
+    borderRadius: 10,
+  },
+  imagePlaceholder: {
+    width: "100%",
+    height: 200,
+    backgroundColor: "#fff",
+    borderWidth: 2,
+    borderColor: "#ddd",
+    borderStyle: "dashed",
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  imagePlaceholderText: {
+    color: "#999",
+    fontSize: 16,
+  },
+  removeImageButton: {
+    marginTop: 10,
+    alignItems: "center",
+  },
+  removeImageText: {
+    color: "#e74c3c",
+    fontSize: 14,
   },
 });
