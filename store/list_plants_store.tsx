@@ -1,46 +1,87 @@
-import { create } from 'zustand';
-import { immer } from 'zustand/middleware/immer';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-import { Plant } from '../interface/plants';
+import { create } from "zustand";
+import { immer } from "zustand/middleware/immer";
+import { Plant } from "../interface/plants";
+import { databaseService } from "../service/DatabaseService";
 
 interface ListPlantsState {
-    plants: Plant[];
-    addPlant: (newPlant: Plant) => void;
-    removePlant: (plantId: string) => void;
-    waterPlant: (plantId: string) => void;
+  plants: Plant[];
+  isLoading: boolean;
+  isInitialized: boolean;
+  initializeStore: () => Promise<void>;
+  addPlant: (newPlant: Plant) => Promise<void>;
+  removePlant: (plantId: string) => Promise<void>;
+  waterPlant: (plantId: string) => Promise<void>;
 }
 
 export const useListPlantsStore = create<ListPlantsState>()(
-    persist(
-        immer((set) => ({
-            plants: [],
+  immer((set, get) => ({
+    plants: [],
+    isLoading: false,
+    isInitialized: false,
 
-            addPlant: (newPlant: Plant) =>
-                set((state) => {
-                    state.plants.push(newPlant);
-                }),
+    initializeStore: async () => {
+      if (get().isInitialized) return;
 
-            removePlant: (plantId: string) =>
-                set((state) => {
-                    state.plants = state.plants.filter((plant) => plant.id !== plantId);
-                }),
+      set((state) => {
+        state.isLoading = true;
+      });
 
-            waterPlant: (plantId: string) =>
-                set((state) => {
-                    const index = state.plants.findIndex((p) => p.id === plantId);
-                    if (index !== -1) {
-                        state.plants[index] = {
-                            ...state.plants[index],
-                            lastWateredDate: new Date(),
-                        };
-                    }
-                }),
-        })),
-        {
-            name: 'plants-storage',
-            storage: createJSONStorage(() => AsyncStorage),
-        }
-    )
+      try {
+        await databaseService.initialize();
+        const plants = await databaseService.getAllPlants();
+        set((state) => {
+          state.plants = plants;
+          state.isInitialized = true;
+          state.isLoading = false;
+        });
+      } catch (error) {
+        console.error("Failed to initialize store:", error);
+        set((state) => {
+          state.isLoading = false;
+        });
+      }
+    },
+
+    addPlant: async (newPlant: Plant) => {
+      try {
+        await databaseService.addPlant(newPlant);
+        set((state) => {
+          state.plants.push(newPlant);
+        });
+      } catch (error) {
+        console.error("Failed to add plant:", error);
+        throw error;
+      }
+    },
+
+    removePlant: async (plantId: string) => {
+      try {
+        await databaseService.removePlant(plantId);
+        set((state) => {
+          state.plants = state.plants.filter((plant) => plant.id !== plantId);
+        });
+      } catch (error) {
+        console.error("Failed to remove plant:", error);
+        throw error;
+      }
+    },
+
+    waterPlant: async (plantId: string) => {
+      try {
+        await databaseService.waterPlant(plantId);
+        set((state) => {
+          const index = state.plants.findIndex((p) => p.id === plantId);
+          if (index !== -1) {
+            state.plants[index] = {
+              ...state.plants[index],
+              lastWateredDate: new Date(),
+            };
+          }
+        });
+      } catch (error) {
+        console.error("Failed to water plant:", error);
+        throw error;
+      }
+    },
+  }))
 );

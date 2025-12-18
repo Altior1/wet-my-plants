@@ -73,7 +73,7 @@ export default function AddPlantsPage() {
     ]);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!name.trim()) {
       Alert.alert("Erreur", "Le nom de la plante est requis");
       return;
@@ -92,14 +92,18 @@ export default function AddPlantsPage() {
       frequency: Number(frequency),
     };
 
-    addPlant(newPlant);
+    try {
+      await addPlant(newPlant);
 
-    // Reset form
-    setName("");
-    setImageUri(null);
-    setFrequency("");
+      // Reset form
+      setName("");
+      setImageUri(null);
+      setFrequency("");
 
-    Alert.alert("Succès", `${newPlant.name} a été ajoutée à votre liste !`);
+      Alert.alert("Succès", `${newPlant.name} a été ajoutée à votre liste !`);
+    } catch (error) {
+      Alert.alert("Erreur", "Impossible d'ajouter la plante");
+    }
   };
 
   return (

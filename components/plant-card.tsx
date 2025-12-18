@@ -34,7 +34,7 @@ export default function PlantCard({ plant }: PlantCardProps) {
     });
   };
 
-  const handleWater = () => {
+  const handleWater = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     Animated.sequence([
@@ -50,7 +50,11 @@ export default function PlantCard({ plant }: PlantCardProps) {
       }),
     ]).start();
 
-    waterPlant(plant.id);
+    try {
+      await waterPlant(plant.id);
+    } catch (error) {
+      Alert.alert("Erreur", "Impossible d'enregistrer l'arrosage");
+    }
   };
 
   const handleDelete = () => {
@@ -62,7 +66,13 @@ export default function PlantCard({ plant }: PlantCardProps) {
         {
           text: "Supprimer",
           style: "destructive",
-          onPress: () => removePlant(plant.id),
+          onPress: async () => {
+            try {
+              await removePlant(plant.id);
+            } catch (error) {
+              Alert.alert("Erreur", "Impossible de supprimer la plante");
+            }
+          },
         },
       ]
     );
